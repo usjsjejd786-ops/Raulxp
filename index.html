@@ -187,7 +187,6 @@ body.crt-on #crt-overlay{ display:block; }
 .taskbar-btn.active{ background:linear-gradient(180deg,#1c4fc4,#123e91);box-shadow:inset 0 1px 3px rgba(0,0,0,.5); }
 #tray{ display:flex;align-items:center;gap:10px;font-size:12px;color:#fff;flex-shrink:0;
   background:linear-gradient(180deg,#1c4fc4,#123e91);border:1px solid #0a2d70;border-radius:3px 0 0 3px;height:100%;padding:0 10px; }
-#edit-indicator{ color:#ffe28a;font-weight:bold;font-size:11px;animation:blink 1.2s infinite; }
 @keyframes blink{ 50%{ opacity:.3; } }
 #clock{ font-family:Tahoma,Verdana,'Segoe UI',Arial,sans-serif;font-size:13px; }
 #tray-clock-wrap{ display:flex;flex-direction:column;align-items:center;line-height:1.15; }
@@ -339,7 +338,6 @@ body.crt-on #login-screen{ border-radius:var(--screen-radius); }
     <div id="start-menu" class="hidden"></div>
     <div id="taskbar-windows"></div>
     <div id="tray">
-      <span id="edit-indicator" class="hidden">✏️ EDIÇÃO</span>
       <span id="tray-clock-wrap"><span id="clock">00:00</span><span id="clock-date">01/01/2026</span></span>
     </div>
   </div>
@@ -359,31 +357,15 @@ body.crt-on #login-screen{ border-radius:var(--screen-radius); }
 ============================================================ */
 const CONFIG = {
   profile: {
-    name: "Otavio",
-    tagline: "dev de sites e joguinhos estranhos",
-    bio: "Sou um jovem estudante e apreciador de tecnologia e nerdices em geral - curto programar, criar sites e joguinhos nas horas vagas, e sempre to enfiado em algum projeto novo por aqui. Praticamente tudo nessa pagina e editavel, inclusive esse texto.",
+    name: "",
+    tagline: "",
+    bio: "",
     photo: "",
     wallpaper: ""
   },
-  links: [
-    { label: "📁 Meus projetos", action: "projetos" },
-    { label: "📸 Instagram", url: "https://www.instagram.com/raulxp__?igsh=MzdtNG9lZnM5eHMw" }
-  ],
-  posts: [
-    {
-      title: "Bem-vindo(a) ao meu cantinho",
-      date: "08/08/2026",
-      content: "Esse blog e meu espaco pessoal e literalmente tudo aqui pode virar outra coisa - texto, posts, projetos, links. Ativa o Modo Edicao la no menu Iniciar pra ver como funciona: e so clicar em cima do que quiser mudar.\n\nAinda to montando as coisas por aqui, mas a ideia e ir postando o que der vontade, do jeito que der vontade."
-    },
-    {
-      title: "Por que eu gosto de esconder segredinhos em sites",
-      date: "08/08/2026",
-      content: "Tem algo muito satisfatorio em construir uma pagina que parece simples na superficie mas tem camadas escondidas por baixo - um clique certo, um codigo digitado no lugar certo, um detalhe que so quem presta atencao percebe.\n\nEsse site tambem tem uma coisinha ou outra escondida por ai. Boa sorte procurando 👀"
-    }
-  ],
-  notes: [
-    { id: "n1", title: "primeiro recado", content: "Isso aqui e um texto escrito no Bloco de Notas. Tudo que voce escrever ali aparece aqui nos Projetos, organizado por dia.", image: "", date: "08/08/2026" }
-  ],
+  links: [],
+  posts: [],
+  notes: [],
   trash: [],
   appOrder: [],
   appNames: {}
@@ -431,7 +413,7 @@ const soundCursor = {};
   for(let i=0;i<4;i++){
     const a = new Audio(SOUND_DATA[name]);
     a.preload = 'auto';
-    a.volume = name==='click' ? 0.5 : 0.8;
+    a.volume = name==='click' ? 0.22 : 0.8;
     try{ a.load(); }catch(e){}
     pool.push(a);
   }
@@ -538,6 +520,8 @@ function resetState(){
   if(confirm('Isso apaga suas edicoes salvas neste navegador (nesse usuario) e volta pro padrao. Continuar?')){
     if(currentProfile) localStorage.removeItem(dataKey(currentProfile.id));
     siteData = defaultState();
+    if(currentProfile) siteData.profile.name = currentProfile.name;
+    saveState();
     currentPostIndex = null;
     applyWallpaper();
     renderDesktopIcons();
@@ -592,9 +576,11 @@ const APPS = [
   { id:'lixeira',  label:'Lixeira',        glyph:'🗑️', title:'Lixeira',
     svg:'<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="gBin" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e7edf4"/><stop offset="100%" stop-color="#9fadc0"/></linearGradient></defs><rect x="12" y="10" width="24" height="4" rx="1.5" fill="#7c8ba0"/><rect x="19" y="6" width="10" height="4" rx="1.5" fill="#7c8ba0"/><path d="M13 16 L15 41 Q15 43 17 43 L31 43 Q33 43 33 41 L35 16 Z" fill="url(#gBin)" stroke="#5c6b80" stroke-width="1"/><g stroke="#5c6b80" stroke-width="1.6"><line x1="20" y1="20" x2="21" y2="39"/><line x1="24" y1="20" x2="24" y2="39"/><line x1="28" y1="20" x2="27" y2="39"/></g></svg>' },
   { id:'config',   label:'Configurações',  glyph:'⚙️', title:'configuracoes.exe',
-    svg:'<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="gGear" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c7d0db"/><stop offset="100%" stop-color="#7c8ba0"/></linearGradient></defs><path d="M24 3l3.4 5.4 6-2.4 1.6 6.3 6.3 1.6-2.4 6 5.4 3.4-5.4 3.4 2.4 6-6.3 1.6-1.6 6.3-6-2.4-3.4 5.4-3.4-5.4-6 2.4-1.6-6.3-6.3-1.6 2.4-6-5.4-3.4 5.4-3.4-2.4-6 6.3-1.6 1.6-6.3 6 2.4z" fill="url(#gGear)" stroke="#4a5568" stroke-width="1"/><circle cx="24" cy="24" r="8.5" fill="#eef1f5" stroke="#4a5568" stroke-width="1"/></svg>' }
+    svg:'<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="gGear" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c7d0db"/><stop offset="100%" stop-color="#7c8ba0"/></linearGradient></defs><path d="M24 3l3.4 5.4 6-2.4 1.6 6.3 6.3 1.6-2.4 6 5.4 3.4-5.4 3.4 2.4 6-6.3 1.6-1.6 6.3-6-2.4-3.4 5.4-3.4-5.4-6 2.4-1.6-6.3-6.3-1.6 2.4-6-5.4-3.4 5.4-3.4-2.4-6 6.3-1.6 1.6-6.3 6 2.4z" fill="url(#gGear)" stroke="#4a5568" stroke-width="1"/><circle cx="24" cy="24" r="8.5" fill="#eef1f5" stroke="#4a5568" stroke-width="1"/></svg>' },
+  { id:'aboutpc',  label:'Sobre este PC',  glyph:'🖥️', title:'sobre_este_pc.exe',
+    svg:'<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="gMonitor" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#5fa8e0"/><stop offset="100%" stop-color="#1f6fb8"/></linearGradient></defs><rect x="4" y="6" width="40" height="26" rx="2" fill="#1f2937" stroke="#0d1420" stroke-width="1"/><rect x="7" y="9" width="34" height="20" fill="url(#gMonitor)"/><rect x="19" y="32" width="10" height="6" fill="#4a5568"/><rect x="13" y="38" width="22" height="3" rx="1.5" fill="#4a5568"/></svg>' }
 ];
-const HIDDEN_APP_IDS = ['config'];
+const HIDDEN_APP_IDS = ['config','aboutpc'];
 const ARR_TO_WIN = { links:'sobre', posts:'projetos' };
 function getAppOrder(){
   const ids = APPS.map(function(a){ return a.id; }).filter(function(id){ return HIDDEN_APP_IDS.indexOf(id)===-1; });
@@ -638,7 +624,7 @@ const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 
 let zTop = 100;
 let openWindows = {};
 let cascadeOffset = 0;
-let editMode = false;
+let editMode = true;
 const CRT_KEY = 'otavio_os_crt_v1';
 let crtOn = true;
 try{ crtOn = localStorage.getItem(CRT_KEY) !== 'off'; }catch(e){}
@@ -810,6 +796,7 @@ function refreshWindowContent(id){
   else if(id==='bloco') body.innerHTML = renderBloco();
   else if(id==='lixeira') body.innerHTML = renderLixeira();
   else if(id==='config') body.innerHTML = renderConfig();
+  else if(id==='aboutpc') body.innerHTML = renderAboutPC();
   else return;
   wireEditableFields(body);
 }
@@ -878,10 +865,17 @@ function renderProjetos(){
       (editMode? '<div class="row-actions"><button class="edit-btn danger" data-trashnote="'+currentNoteIndex+'">🗑️ apagar</button></div>' : '');
   }
   let html = '<div class="pixel" style="font-size:11px;margin-bottom:10px;">projetos — seus textos</div>';
-  if(editMode) html += '<button class="edit-btn" data-open="bloco">✏️ escrever novo texto</button>';
-  const items = getAllTexts();
+  html += '<button class="edit-btn" data-open="bloco">✏️ escrever novo texto</button>';
+  html += '<input type="text" id="projetos-search" placeholder="🔎 buscar por titulo ou dia (ex: 15/08)..." value="'+escapeHTML(projetosSearchQuery)+'" style="width:100%;margin:10px 0;padding:7px;font-family:Tahoma,Verdana,sans-serif;font-size:14px;border:1px solid #7f9db6;border-radius:2px;box-sizing:border-box;">';
+  let items = getAllTexts();
+  const q = projetosSearchQuery.trim().toLowerCase();
+  if(q){
+    items = items.filter(function(it){
+      return it.title.toLowerCase().indexOf(q)!==-1 || it.date.indexOf(q)!==-1;
+    });
+  }
   if(items.length===0){
-    html += '<p style="color:var(--text-dim);">nada escrito ainda — usa o Bloco de Notas pra comecar.</p>';
+    html += '<p style="color:var(--text-dim);">'+(q? 'nada encontrado pra "'+escapeHTML(projetosSearchQuery)+'".' : 'nada escrito ainda — usa o Bloco de Notas pra comecar.')+'</p>';
     return html;
   }
   const groups = {};
@@ -897,6 +891,7 @@ function renderProjetos(){
   });
   return html;
 }
+let projetosSearchQuery = '';
 function getAllTexts(){
   const items = [];
   siteData.posts.forEach(function(p,i){ items.push({ type:'post', idx:i, title:p.title, date:p.date, icon:'📄' }); });
@@ -969,6 +964,37 @@ function renderConfig(){
         (p.wallpaper? '<button class="edit-btn danger" data-clearwallpaper="1">usar padrão</button>' : '')+
       '</div>'+
       '<p style="font-size:13px;color:var(--text-dim);margin-top:8px;">se voce nao escolher nenhuma, o fundo muda sozinho: uma foto quando acessar do computador, outra no celular.</p>'+
+    '</div>'
+  );
+}
+
+/* ---------- sobre_este_pc.exe : informacoes (decorativas) do sistema ---------- */
+function renderAboutPC(){
+  const nomePC = (siteData.profile.name || 'usuario').trim().toUpperCase().replace(/\s+/g,'-')+'-PC';
+  return (
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">'+
+      '<div style="font-size:40px;">🖥️</div>'+
+      '<div><div class="pixel" style="font-size:13px;">RaulXP</div>'+
+        '<div style="font-size:13px;color:var(--text-dim);">Edição Pessoal</div></div>'+
+    '</div>'+
+    '<div class="cfg-section">'+
+      '<div style="font-size:14px;line-height:1.7;">'+
+        '<b>Edição</b> RaulXP — Edição Pessoal<br>'+
+        '<b>Versão</b> RaulXP10<br>'+
+        '<span style="color:var(--text-dim);">© direitos reservados a Raul</span>'+
+      '</div>'+
+    '</div>'+
+    '<div class="cfg-section">'+
+      '<h4>Sistema</h4>'+
+      '<div style="font-size:14px;line-height:1.9;">'+
+        '<b>Processador:</b> Café Instantâneo 9000 @ 3.2 xícaras/seg<br>'+
+        '<b>Memória RAM:</b> Ideias aleatórias (ilimitado)<br>'+
+        '<b>Tipo de sistema:</b> Sistema pessoal de 64 bits<br>'+
+        '<b>Armazenamento:</b> ∞ de rascunhos e ideias soltas'+
+      '</div>'+
+    '</div>'+
+    '<div class="cfg-section">'+
+      '<div style="font-size:14px;"><b>Nome do computador:</b> '+escapeHTML(nomePC)+'</div>'+
     '</div>'
   );
 }
@@ -1098,7 +1124,6 @@ function renderStartMenu(){
     return '<div class="sm-item" data-open="'+a.id+'"><span class="sm-icon sm-icon-svg">'+a.svg+'</span>'+escapeHTML(getAppLabel(a))+'</div>';
   }).join('');
   right += '<div class="sm-sep"></div>';
-  right += '<div class="sm-item" id="sm-editmode"><span class="sm-icon sm-icon-svg">'+ICON_WRENCH+'</span>Modo Edicao: '+(editMode?'ON':'OFF')+'</div>';
   right += '<div class="sm-item" id="sm-crt"><span class="sm-icon sm-icon-svg">'+ICON_CRT+'</span>Filtro CRT: '+(crtOn?'ON':'OFF')+'</div>';
   right += '<div class="sm-item" id="sm-export"><span class="sm-icon sm-icon-svg">'+ICON_EXPORT+'</span>Exportar dados</div>';
   right += '<div class="sm-item" id="sm-import"><span class="sm-icon sm-icon-svg">'+ICON_IMPORT+'</span>Importar dados</div>';
@@ -1120,12 +1145,6 @@ function toggleStartMenu(force){
   const menu = document.getElementById('start-menu');
   const show = (force!==undefined) ? force : menu.classList.contains('hidden');
   menu.classList.toggle('hidden', !show);
-}
-function toggleEditMode(){
-  editMode = !editMode;
-  document.getElementById('edit-indicator').classList.toggle('hidden', !editMode);
-  renderStartMenu();
-  Object.keys(openWindows).forEach(refreshWindowContent);
 }
 function applyCrtState(){
   document.body.classList.toggle('crt-on', crtOn);
@@ -1181,6 +1200,13 @@ document.getElementById('windows-layer').addEventListener('input', function(e){
     if(preview){ preview.style.width = val+'px'; preview.style.height = val+'px'; preview.style.fontSize = Math.round(val*0.4)+'px'; }
     const sobreAvatar = document.querySelector('#body-sobre .avatar');
     if(sobreAvatar){ sobreAvatar.style.width = val+'px'; sobreAvatar.style.height = val+'px'; sobreAvatar.style.fontSize = Math.round(val*0.4)+'px'; }
+  }
+  else if(e.target.id==='projetos-search'){
+    projetosSearchQuery = e.target.value;
+    const cursorPos = e.target.selectionStart;
+    refreshWindowContent('projetos');
+    const newInput = document.getElementById('projetos-search');
+    if(newInput){ newInput.focus(); newInput.setSelectionRange(cursorPos, cursorPos); }
   }
 });
 document.getElementById('windows-layer').addEventListener('change', function(e){
@@ -1294,7 +1320,6 @@ document.getElementById('note-image-input').addEventListener('change', function(
 document.getElementById('start-menu').addEventListener('click', function(e){
   const openEl = e.target.closest('[data-open]');
   if(openEl){ openWindow(openEl.dataset.open); toggleStartMenu(false); return; }
-  if(e.target.closest('#sm-editmode')){ toggleEditMode(); toggleStartMenu(false); return; }
   if(e.target.closest('#sm-crt')){ toggleCrt(); toggleStartMenu(false); return; }
   if(e.target.closest('#sm-export')){ exportState(); toggleStartMenu(false); return; }
   if(e.target.closest('#sm-import')){ document.getElementById('import-file-input').click(); toggleStartMenu(false); return; }
@@ -1329,8 +1354,8 @@ document.getElementById('desktop').addEventListener('contextmenu', function(e){
 });
 document.getElementById('context-menu').addEventListener('click', function(e){
   const action = e.target.closest('[data-action]') ? e.target.closest('[data-action]').dataset.action : null;
-  if(action==='refresh') location.reload();
-  if(action==='about-pc') openWindow('sobre');
+  if(action==='open-config') openWindow('config');
+  if(action==='about-pc') openWindow('aboutpc');
   hideContextMenu();
 });
 
