@@ -108,13 +108,12 @@ body.crt-on #crt-overlay{ display:block; }
   98%{ opacity:.95; }
 }
 #desktop-icons{
-  position:absolute;top:14px;left:10px;right:10px;bottom:70px;overflow-y:auto;
-  display:grid;grid-template-columns:repeat(auto-fill, 78px);grid-auto-rows:86px;gap:6px;align-content:start;
+  position:absolute;top:14px;left:10px;right:10px;bottom:70px;overflow-y:auto;overflow-x:hidden;
 }
 .icon{
-  width:78px;height:82px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  position:absolute;width:78px;height:82px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
   gap:6px;padding-top:8px;border-radius:4px;cursor:pointer;user-select:none;-webkit-user-select:none;
-  touch-action:none;
+  touch-action:none;transition:left .15s ease,top .15s ease;
 }
 .icon.selected{ background:rgba(42,111,219,.45);outline:1px dashed rgba(255,255,255,.8); }
 .icon.dragging{ opacity:.55;transform:scale(1.08);z-index:50;background:rgba(42,111,219,.35); }
@@ -254,8 +253,6 @@ body.crt-on #crt-overlay{ display:block; }
 @media (max-width:560px){
   body{ font-size:14px; }
   .window{ min-width:0;width:92vw !important;left:4vw !important; }
-  #desktop-icons{ grid-template-columns:repeat(auto-fill, 70px); }
-  .icon{ width:70px; }
   #start-menu{ width:94vw; }
   .sm-item{ font-size:11px; }
 }
@@ -368,6 +365,7 @@ const CONFIG = {
   notes: [],
   trash: [],
   appOrder: [],
+  iconPos: {},
   appNames: {}
 };
 
@@ -501,6 +499,7 @@ function normalizeState(data){
     notes: Array.isArray(data.notes) ? data.notes : base.notes,
     trash: Array.isArray(data.trash) ? data.trash : base.trash,
     appOrder: Array.isArray(data.appOrder) ? data.appOrder : base.appOrder,
+    iconPos: (data.iconPos && typeof data.iconPos==='object') ? data.iconPos : base.iconPos,
     appNames: (data.appNames && typeof data.appNames==='object') ? data.appNames : base.appNames
   };
 }
@@ -590,6 +589,57 @@ function getAppOrder(){
 }
 function getOrderedApps(){
   return getAppOrder().map(function(id){ return APPS.filter(function(a){ return a.id===id; })[0]; }).filter(Boolean);
+}
+/* ---------- posicoes livres dos icones (grade, com celulas vazias permitidas) ---------- */
+const ICON_CELL_W = 84, ICON_CELL_H = 92;
+function cellKey(col,row){ return col+','+row; }
+function computeGridCols(){
+  const wrap = document.getElementById('desktop-icons');
+  const w = (wrap && wrap.clientWidth) || 300;
+  return Math.max(1, Math.floor(w / ICON_CELL_W));
+}
+function findFreeCell(cols, taken){
+  let row = 0;
+  while(true){
+    for(let col=0; col<cols; col++){
+      if(!taken[cellKey(col,row)]) return { col: col, row: row };
+    }
+    row++;
+  }
+}
+function ensureIconPositions(){
+  if(!siteData.iconPos) siteData.iconPos = {};
+  const ids = APPS.map(function(a){ return a.id; }).filter(function(id){ return HIDDEN_APP_IDS.indexOf(id)===-1; });
+  const cols = computeGridCols();
+  const taken = {};
+  ids.forEach(function(id){
+    const p = siteData.iconPos[id];
+    const valid = p && typeof p.col==='number' && typeof p.row==='number' && p.col>=0 && p.col<cols && p.row>=0 && !taken[cellKey(p.col,p.row)];
+    if(valid){
+      taken[cellKey(p.col,p.row)] = true;
+    }else{
+      const free = findFreeCell(cols, taken);
+      siteData.iconPos[id] = free;
+      taken[cellKey(free.col,free.row)] = true;
+    }
+  });
+}
+function getGridOrderedApps(){
+  ensureIconPositions();
+  const ids = APPS.map(function(a){ return a.id; }).filter(function(id){ return HIDDEN_APP_IDS.indexOf(id)===-1; });
+  return ids.slice().sort(function(a,b){
+    const pa = siteData.iconPos[a], pb = siteData.iconPos[b];
+    if(pa.row!==pb.row) return pa.row-pb.row;
+    return pa.col-pb.col;
+  }).map(function(id){ return APPS.filter(function(a){ return a.id===id; })[0]; }).filter(Boolean);
+}
+function applyIconPositionsToDOM(wrap){
+  const ids = APPS.map(function(a){ return a.id; }).filter(function(id){ return HIDDEN_APP_IDS.indexOf(id)===-1; });
+  ids.forEach(function(id){
+    const el = wrap.querySelector('.icon[data-icon="'+id+'"]');
+    const p = siteData.iconPos[id];
+    if(el && p){ el.style.left = (p.col*ICON_CELL_W)+'px'; el.style.top = (p.row*ICON_CELL_H)+'px'; }
+  });
 }
 function getAppLabel(app){ return (siteData.appNames && siteData.appNames[app.id]) || app.label; }
 function moveApp(id, dir){
@@ -1031,8 +1081,11 @@ function saveNoteDraft(){
 ============================================================ */
 function renderDesktopIcons(){
   const wrap = document.getElementById('desktop-icons');
-  wrap.innerHTML = getOrderedApps().map(function(a){
-    return '<div class="icon" data-icon="'+a.id+'"><div class="glyph">'+a.svg+'</div><div class="label">'+escapeHTML(getAppLabel(a))+'</div></div>';
+  ensureIconPositions();
+  const apps = APPS.filter(function(a){ return HIDDEN_APP_IDS.indexOf(a.id)===-1; });
+  wrap.innerHTML = apps.map(function(a){
+    const p = siteData.iconPos[a.id];
+    return '<div class="icon" data-icon="'+a.id+'" style="left:'+(p.col*ICON_CELL_W)+'px;top:'+(p.row*ICON_CELL_H)+'px;"><div class="glyph">'+a.svg+'</div><div class="label">'+escapeHTML(getAppLabel(a))+'</div></div>';
   }).join('');
   wrap.querySelectorAll('.icon').forEach(function(iconEl){
     iconEl.addEventListener('click', function(){
@@ -1047,7 +1100,7 @@ function renderDesktopIcons(){
     });
   });
 }
-/* ---------- arrastar pra reorganizar os icones (aperta e segura, depois arrasta) ---------- */
+/* ---------- arrastar pra QUALQUER lugar da area de trabalho (aperta e segura, depois arrasta) ---------- */
 let suppressNextIconClick = false;
 let iconDrag = null;
 function setupIconDragReorder(){
@@ -1055,7 +1108,7 @@ function setupIconDragReorder(){
   wrap.addEventListener('pointerdown', function(e){
     const iconEl = e.target.closest('.icon');
     if(!iconEl) return;
-    iconDrag = { iconEl: iconEl, startX: e.clientX, startY: e.clientY, dragging:false, moved:false };
+    iconDrag = { iconEl: iconEl, id: iconEl.dataset.icon, startX: e.clientX, startY: e.clientY, dragging:false, moved:false };
     iconDrag.timer = setTimeout(function(){
       if(!iconDrag) return;
       iconDrag.dragging = true;
@@ -1073,14 +1126,22 @@ function setupIconDragReorder(){
     }
     e.preventDefault();
     iconDrag.moved = true;
-    const under = document.elementFromPoint(e.clientX, e.clientY);
-    const overIcon = under ? under.closest('.icon') : null;
-    if(overIcon && overIcon!==iconDrag.iconEl && overIcon.parentElement===wrap){
-      const children = Array.from(wrap.children);
-      const overIdx = children.indexOf(overIcon);
-      const dragIdx = children.indexOf(iconDrag.iconEl);
-      if(dragIdx < overIdx) wrap.insertBefore(iconDrag.iconEl, overIcon.nextSibling);
-      else wrap.insertBefore(iconDrag.iconEl, overIcon);
+    const rect = wrap.getBoundingClientRect();
+    const x = e.clientX - rect.left + wrap.scrollLeft;
+    const y = e.clientY - rect.top + wrap.scrollTop;
+    const cols = computeGridCols();
+    const col = Math.max(0, Math.min(Math.floor(x/ICON_CELL_W), cols-1));
+    const row = Math.max(0, Math.floor(y/ICON_CELL_H));
+    const draggedId = iconDrag.id;
+    const cur = siteData.iconPos[draggedId];
+    if(!cur || cur.col!==col || cur.row!==row){
+      const occupantId = Object.keys(siteData.iconPos).filter(function(id){ return HIDDEN_APP_IDS.indexOf(id)===-1; }).find(function(id){
+        const p = siteData.iconPos[id];
+        return id!==draggedId && p.col===col && p.row===row;
+      });
+      if(occupantId && cur){ siteData.iconPos[occupantId] = { col: cur.col, row: cur.row }; }
+      siteData.iconPos[draggedId] = { col: col, row: row };
+      applyIconPositionsToDOM(wrap);
     }
   });
   function endDrag(){
@@ -1089,8 +1150,6 @@ function setupIconDragReorder(){
     if(iconDrag.dragging){
       iconDrag.iconEl.classList.remove('dragging');
       if(iconDrag.moved){
-        const newOrder = Array.from(wrap.children).map(function(c){ return c.dataset.icon; });
-        siteData.appOrder = newOrder;
         saveState();
         renderStartMenu();
       }
@@ -1114,7 +1173,7 @@ const ICON_POWER = '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
 function renderStartMenu(){
   const menu = document.getElementById('start-menu');
   const rightIds = { lixeira:1 };
-  const ordered = getOrderedApps();
+  const ordered = getGridOrderedApps();
   const leftApps = ordered.filter(function(a){ return !rightIds[a.id]; });
   const rightApps = ordered.filter(function(a){ return rightIds[a.id]; });
   const left = leftApps.map(function(a){
